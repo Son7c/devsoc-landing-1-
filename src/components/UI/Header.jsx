@@ -27,7 +27,7 @@ export default function Header() {
 		},
 		{
 			name: "Newletter",
-			url: "/newsletters",
+			url: "/newsletter",
 		},
 		{
 			name: "Events",
