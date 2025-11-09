@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue } from "motion/react";
+import React, { useRef, useState } from "react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -39,7 +39,7 @@ export const Card = ({ card }) => {
 	return (
 		<>
 			<motion.div
-				className="relative h-85 w-60 overflow-hidden rounded-3xl bg-neutral-900 md:h-[40rem] md:w-96"
+				className="relative h-85 w-60 overflow-hidden rounded-3xl bg-neutral-900 md:h-160 md:w-96"
 				whileHover={{ scale: 1.05 }}
 				transition={{ duration: 0.2 }}
 			>
@@ -93,7 +93,8 @@ export const BlurImage = ({
 				position: "absolute",
 				height: "100%",
 				width: "100%",
-				inset: 0,
+				left: 0,
+				top: 0,
 				objectFit: "cover",
 			}
 		: {};

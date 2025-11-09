@@ -235,7 +235,7 @@ function AppleCardsCarouselSection() {
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }}
-				className="relative flex h-85 w-60 cursor-pointer items-center justify-center overflow-hidden rounded-3xl bg-neutral-900 md:h-[40rem] md:w-96"
+				className="relative flex h-85 w-60 cursor-pointer items-center justify-center overflow-hidden rounded-3xl bg-neutral-900 md:h-160 md:w-96"
 				whileHover={{ scale: 1.05 }}
 			>
 				<div className="flex flex-col items-center justify-center gap-4 text-white">

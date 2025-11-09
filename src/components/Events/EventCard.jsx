@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { DirectionAwareHover } from "@/components/UI/directionAwareHover";
 
 // Animation variants for the card
 const cardVariants = {
@@ -25,25 +25,13 @@ export default function EventCard({ event }) {
 			initial="hidden"
 			whileInView="visible"
 			viewport={{ once: true }}
-			className="group"
+			className="relative flex h-[400px] items-center justify-center"
 		>
-			<Link href={`/events/${event.id}`}>
-				<div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-neutral-700 shadow-lg transition-all duration-300 group-hover:shadow-xl">
-					<Image
-						src={event.image}
-						alt={event.title}
-						fill
-						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-						className="object-cover transition-transform duration-300 group-hover:scale-105"
-					/>
-
-					<div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent to-60% p-4 transition-all duration-300 group-hover:from-black/80">
-						<h3 className="text-lg font-semibold text-white sm:text-xl">
-							{event.title}
-						</h3>
-						<p className="text-sm text-neutral-300">{event.date}</p>
-					</div>
-				</div>
+			<Link href={`/events/${event.id}`} className="h-full w-full">
+				<DirectionAwareHover imageUrl={event.image} className="h-full w-full">
+					<p className="text-xl font-bold">{event.title}</p>
+					<p className="text-sm font-normal">{event.date}</p>
+				</DirectionAwareHover>
 			</Link>
 		</motion.div>
 	);
