@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, Suspense, useMemo } from "react";
 import { useGLTF, useAnimations, Environment } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useInView } from "react-intersection-observer";
-import Image from "next/image";
 import * as THREE from "three";
 
 function AstronautModel({ mouse, isAstronautVisible }) {
@@ -147,16 +146,8 @@ export default function AstronautScene() {
 		triggerOnce: false,
 		initialInView: true,
 	});
-	const [isMobile, setIsMobile] = useState(false);
 
 	useEffect(() => {
-		// Detect mobile device
-		const checkMobile = () => {
-			setIsMobile(window.innerWidth < 768);
-		};
-		checkMobile();
-		window.addEventListener("resize", checkMobile);
-
 		// Initialize mouse position after mount
 		mouse.current = {
 			x: typeof window !== "undefined" ? window.innerWidth / 2 : 0,
@@ -172,31 +163,9 @@ export default function AstronautScene() {
 
 			return () => {
 				window.removeEventListener("mousemove", handleMouseMove);
-				window.removeEventListener("resize", checkMobile);
 			};
 		}
 	}, []);
-
-	// Show static image on mobile devices for better performance
-	if (isMobile) {
-		return (
-			<div
-				ref={containerRef}
-				className="absolute right-0 bottom-0 left-0 flex items-end justify-center"
-			>
-				<div className="relative h-[300px] w-full max-w-[400px]">
-					<Image
-						src="/DevsocHero.png"
-						alt="DevSoc Astronaut"
-						fill
-						className="object-contain object-bottom"
-						priority
-						sizes="(max-width: 768px) 100vw, 400px"
-					/>
-				</div>
-			</div>
-		);
-	}
 
 	return (
 		<div ref={containerRef} style={{ width: "100%", height: "100%" }}>

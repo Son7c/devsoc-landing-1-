@@ -37,13 +37,13 @@ export default function EventCard({ event }) {
 		return (
 			<div className="group">
 				<Link href={`/events/${event.id}`}>
-					<div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-neutral-700 shadow-lg md:aspect-auto md:h-[400px]">
+					<div className="relative aspect-3/4 w-full overflow-hidden rounded-3xl bg-neutral-700 shadow-lg md:aspect-auto md:h-[400px]">
 						<img
 							src={event.image}
 							alt={event.title}
 							className="h-full w-full object-cover"
 						/>
-						<div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent to-60% p-4">
+						<div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent to-60% p-4">
 							<h3 className="text-lg font-semibold text-white sm:text-xl">
 								{event.title}
 							</h3>
@@ -66,7 +66,7 @@ export default function EventCard({ event }) {
 				className="group"
 			>
 				<Link href={`/events/${event.id}`}>
-					<div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-neutral-700 shadow-lg">
+					<div className="relative aspect-3/4 w-full overflow-hidden rounded-3xl bg-neutral-700 shadow-lg">
 						<Image
 							src={event.image}
 							alt={event.title}
@@ -74,11 +74,11 @@ export default function EventCard({ event }) {
 							sizes="100vw"
 							className="object-cover"
 						/>
-						<div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent to-60% p-4">
-							<h3 className="text-lg font-semibold text-white">
+						<div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/80 to-transparent to-60% p-4">
+							<h3 className="text-xl font-semibold text-white">
 								{event.title}
 							</h3>
-							<p className="text-sm text-neutral-300">{event.date}</p>
+							<p className="text-neutral-300">{event.date}</p>
 						</div>
 					</div>
 				</Link>
