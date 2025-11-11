@@ -23,8 +23,8 @@ class CanvasErrorBoundary extends Component {
 		return { hasError: true };
 	}
 
-	componentDidCatch(error, errorInfo) {
-		// console.error("Canvas Error Boundary caught:", error, errorInfo);
+	componentDidCatch(error) {
+		console.error("Canvas Error Boundary caught:", error);
 		this.props.onError?.(error);
 	}
 
@@ -192,13 +192,16 @@ function isWebGLAvailable() {
 	}
 }
 
-export default function AstronautScene({ onModelLoaded, shouldAnimate }) {
+export default function AstronautScene({ onModelLoaded }) {
 	const mouse = useRef({ x: 0, y: 0 });
 	const [hasWebGLError, setHasWebGLError] = useState(false);
 	const [modelLoadTimeout, setModelLoadTimeout] = useState(false);
 	const [webglSupported, setWebglSupported] = useState(true);
 	const [showFallback, setShowFallback] = useState(false);
+	const [modelLoaded, setModelLoaded] = useState(false);
 	const loadTimeoutRef = useRef(null);
+	const safetyTimeoutRef = useRef(null);
+	const mountTimeRef = useRef(Date.now());
 	const { ref: containerRef, inView: isAstronautVisible } = useInView({
 		threshold: 0.1,
 		triggerOnce: false,
@@ -241,24 +244,58 @@ export default function AstronautScene({ onModelLoaded, shouldAnimate }) {
 		}
 	}, []);
 
-	// Set a timeout for model loading - if it doesn't load in 5 seconds, show fallback
+	// Set a timeout for model loading - if it doesn't load in time, show fallback
 	useEffect(() => {
-		// Only set timeout if WebGL is supported
-		if (webglSupported) {
+		// Detect if we're on mobile device (even in desktop mode)
+		const isMobileDevice =
+			typeof window !== "undefined" &&
+			(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+				navigator.userAgent,
+			) ||
+				(navigator.maxTouchPoints && navigator.maxTouchPoints > 2));
+
+		// Use shorter timeout for mobile devices (2.5s) vs desktop (5s)
+		const timeout = isMobileDevice ? 2500 : 5000;
+
+		// Primary timeout - starts immediately
+		if (webglSupported && !modelLoaded && !modelLoadTimeout) {
+			console.log(`Setting model load timeout: ${timeout}ms`);
 			loadTimeoutRef.current = setTimeout(() => {
-				console.warn("Model loading timeout - showing fallback image");
+				// Only trigger timeout if model still hasn't loaded
+				if (!modelLoaded) {
+					console.warn(
+						`Model loading timeout after ${timeout}ms - showing fallback image`,
+					);
+					setModelLoadTimeout(true);
+					setShowFallback(true);
+					onModelLoaded?.();
+				}
+			}, timeout);
+		}
+
+		// Safety timeout - absolute maximum wait time (4s for mobile, 7s for desktop)
+		const safetyTimeout = isMobileDevice ? 4000 : 7000;
+		safetyTimeoutRef.current = setTimeout(() => {
+			if (!modelLoaded && !showFallback) {
+				console.error(
+					`Safety timeout triggered after ${safetyTimeout}ms - forcing fallback`,
+				);
 				setModelLoadTimeout(true);
 				setShowFallback(true);
 				onModelLoaded?.();
-			}, 5000);
-		}
+			}
+		}, safetyTimeout);
 
 		return () => {
 			if (loadTimeoutRef.current) {
 				clearTimeout(loadTimeoutRef.current);
 			}
+			if (safetyTimeoutRef.current) {
+				clearTimeout(safetyTimeoutRef.current);
+			}
 		};
-	}, [onModelLoaded, webglSupported]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [webglSupported, modelLoaded, showFallback]);
 
 	// Handle WebGL and model loading errors
 	const handleCanvasError = (error) => {
@@ -266,22 +303,38 @@ export default function AstronautScene({ onModelLoaded, shouldAnimate }) {
 			console.error("Canvas Error:", error.message || "Unknown error");
 		}
 		setHasWebGLError(true);
-		// Clear the timeout since we're handling the error
+		// Clear both timeouts since we're handling the error
 		if (loadTimeoutRef.current) {
 			clearTimeout(loadTimeoutRef.current);
 		}
-		// Wait at least 1.5 seconds to show loading screen, then show fallback
+		if (safetyTimeoutRef.current) {
+			clearTimeout(safetyTimeoutRef.current);
+		}
+		
+		// Calculate how long to wait to ensure loading screen is visible
+		const elapsedTime = Date.now() - mountTimeRef.current;
+		const minLoadingTime = 1500;
+		const waitTime = Math.max(0, minLoadingTime - elapsedTime);
+		
+		console.log(`Waiting ${waitTime}ms before showing fallback`);
 		setTimeout(() => {
 			setShowFallback(true);
 			onModelLoaded?.();
-		}, 1500);
+		}, waitTime);
 	};
 
 	// Handle successful model load
 	const handleModelLoaded = () => {
-		// Clear the timeout since model loaded successfully
+		const loadTime = Date.now() - mountTimeRef.current;
+		console.log(`Model loaded successfully in ${loadTime}ms`);
+		// Mark model as loaded
+		setModelLoaded(true);
+		// Clear both timeouts since model loaded successfully
 		if (loadTimeoutRef.current) {
 			clearTimeout(loadTimeoutRef.current);
+		}
+		if (safetyTimeoutRef.current) {
+			clearTimeout(safetyTimeoutRef.current);
 		}
 		onModelLoaded?.();
 	};
@@ -339,9 +392,11 @@ export default function AstronautScene({ onModelLoaded, shouldAnimate }) {
 								try {
 									const gl = state.gl.getContext();
 									if (!gl) {
+										console.error("WebGL context not available");
 										handleCanvasError(new Error("WebGL context not available"));
 									}
 								} catch (err) {
+									console.error("Error checking WebGL context:", err);
 									handleCanvasError(err);
 								}
 							}}
@@ -366,24 +421,25 @@ export default function AstronautScene({ onModelLoaded, shouldAnimate }) {
 			</div>
 		);
 	} catch (error) {
-		// If Canvas rendering fails, show fallback
-		handleCanvasError(error);
-		if (showFallback) {
-			return (
-				<div className="flex h-full w-full items-end justify-center">
-					<div className="relative h-full w-full max-w-[500px]">
-						<Image
-							src="/DevsocHero.png"
-							alt="DevSoc Astronaut"
-							fill
-							className="object-contain object-bottom"
-							priority
-						/>
-					</div>
-				</div>
-			);
+		// If Canvas rendering fails, trigger error handler and show fallback immediately
+		console.error("Canvas rendering error:", error);
+		if (!hasWebGLError) {
+			handleCanvasError(error);
 		}
-		return null;
+		// Always show fallback when Canvas fails to render
+		return (
+			<div className="flex h-full w-full items-end justify-center">
+				<div className="relative h-full w-full max-w-[500px]">
+					<Image
+						src="/DevsocHero.png"
+						alt="DevSoc Astronaut"
+						fill
+						className="object-contain object-bottom"
+						priority
+					/>
+				</div>
+			</div>
+		);
 	}
 }
 
