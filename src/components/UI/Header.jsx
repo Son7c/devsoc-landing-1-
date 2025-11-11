@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
@@ -8,6 +8,8 @@ import { Home, CalendarDays, Newspaper, UserSquare2 } from "lucide-react";
 
 export default function Header() {
 	const [hovered, setHovered] = useState(null);
+	const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+	const navRefs = useRef([]);
 	const pathname = usePathname();
 	const navItems = [
 		{
@@ -39,8 +41,44 @@ export default function Header() {
 		return pathname.startsWith(href);
 	};
 
+	const activeIndex = navItems.findIndex((item) => isActive(item.href));
+	const displayIndex = hovered !== null ? hovered : activeIndex;
+
+	const updateIndicatorPosition = () => {
+		if (displayIndex !== -1 && navRefs.current[displayIndex]) {
+			const element = navRefs.current[displayIndex];
+			setIndicatorStyle({
+				left: element.offsetLeft,
+				width: element.offsetWidth,
+			});
+		}
+	};
+
+	useEffect(() => {
+		updateIndicatorPosition();
+	}, [displayIndex]);
+
+	useEffect(() => {
+		window.addEventListener("resize", updateIndicatorPosition);
+		return () => window.removeEventListener("resize", updateIndicatorPosition);
+	}, [displayIndex]);
+
 	return (
-		<nav className="ease fixed right-0 bottom-0 left-0 z-100 mx-auto mb-4 flex h-fit w-fit items-center justify-center rounded-4xl border border-black/20 bg-neutral-900 px-3 py-2 text-white shadow-[0_1px_1px_rgba(0,0,0,0.05),0_4px_6px_rgba(34,42,53,0.04),0_24px_68px_rgba(47,48,55,0.05),0_2px_3px_rgba(0,0,0,0.04)] backdrop-blur-lg transition-all duration-300 md:top-0 md:mt-4 md:px-1 md:py-0.5">
+		<nav className="ease fixed right-0 bottom-0 left-0 z-100 mx-auto mb-4 flex h-fit w-fit items-center justify-center rounded-4xl border border-black/20 bg-neutral-900 px-1 py-2 text-white shadow-[0_1px_1px_rgba(0,0,0,0.05),0_4px_6px_rgba(34,42,53,0.04),0_24px_68px_rgba(47,48,55,0.05),0_2px_3px_rgba(0,0,0,0.04)] backdrop-blur-lg transition-all duration-300 md:top-0 md:mt-4 md:px-1 md:py-0.5">
+			{displayIndex !== -1 && (
+				<motion.div
+					className="absolute h-[calc(100%-10px)] w-full rounded-full bg-orange-200 md:h-[calc(100%-6px)]"
+					animate={{
+						left: indicatorStyle.left,
+						width: indicatorStyle.width,
+					}}
+					transition={{
+						type: "spring",
+						stiffness: 350,
+						damping: 30,
+					}}
+				/>
+			)}
 			{navItems.map((item, idx) => {
 				const active = isActive(item.href);
 
@@ -48,20 +86,11 @@ export default function Header() {
 					<Link
 						key={item.title}
 						href={item.href}
+						ref={(el) => (navRefs.current[idx] = el)}
 						onMouseEnter={() => setHovered(idx)}
 						onMouseLeave={() => setHovered(null)}
 						className="group relative w-full px-6 py-3 text-center text-white lg:px-8"
 					>
-						{(hovered === idx || (active && hovered === null)) && (
-							<motion.div
-								transition={{
-									ease: "easeInOut",
-								}}
-								layoutId="hover"
-								className="absolute inset-0 h-full w-full rounded-full bg-orange-200"
-							></motion.div>
-						)}
-
 						<p
 							className={`relative flex items-center justify-center gap-2 transition-all duration-500 ease-in-out group-hover:text-black ${hovered === idx || (active && hovered === null) ? "text-black" : ""}`}
 						>
