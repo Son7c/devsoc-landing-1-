@@ -41,6 +41,14 @@ export const metadata = {
 export default function RootLayout({ children }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
+			<head>
+				<link
+					rel="preload"
+					href="/astronaut.glb"
+					as="fetch"
+					crossOrigin="anonymous"
+				/>
+			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} ${bricolageGrotesque.className} ${iceland.variable} pb-18 antialiased md:pb-0`}
 				suppressHydrationWarning

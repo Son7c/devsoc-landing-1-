@@ -5,6 +5,11 @@ import { FallbackImage } from "./astronaut/FallbackImage";
 import { AstronautCanvas } from "./astronaut/AstronautCanvas";
 import { useAstronautLoader } from "./astronaut/useAstronautLoader";
 
+// Preload the model immediately when this module loads
+if (typeof window !== "undefined") {
+	useGLTF.preload("/astronaut.glb");
+}
+
 export default function AstronautScene({ onModelLoaded }) {
 	const mouse = useRef({ x: 0, y: 0 });
 	const { ref: containerRef, inView: isAstronautVisible } = useInView({
@@ -13,15 +18,8 @@ export default function AstronautScene({ onModelLoaded }) {
 		initialInView: true,
 	});
 
-	const {
-		hasWebGLError,
-		modelLoadTimeout,
-		webglSupported,
-		showFallback,
-		skipCanvas,
-		handleCanvasError,
-		handleModelLoaded,
-	} = useAstronautLoader(onModelLoaded);
+	const { showFallback, skipCanvas, handleCanvasError, handleModelLoaded } =
+		useAstronautLoader(onModelLoaded);
 
 	useEffect(() => {
 		mouse.current = {
@@ -39,37 +37,19 @@ export default function AstronautScene({ onModelLoaded }) {
 		}
 	}, []);
 
-	if (showFallback && (!webglSupported || hasWebGLError || modelLoadTimeout)) {
+	// Show fallback if needed
+	if (showFallback || skipCanvas) {
 		return <FallbackImage />;
 	}
 
-	if (!webglSupported && !showFallback) {
-		return null;
-	}
-
-	if (skipCanvas) {
-		return showFallback ? <FallbackImage /> : null;
-	}
-
-	try {
-		return (
-			<div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-				<AstronautCanvas
-					mouse={mouse}
-					isAstronautVisible={isAstronautVisible}
-					onCanvasError={handleCanvasError}
-					onModelLoaded={handleModelLoaded}
-				/>
-			</div>
-		);
-	} catch (error) {
-		if (!hasWebGLError) {
-			handleCanvasError(error);
-		}
-		return <FallbackImage />;
-	}
-}
-
-if (typeof window !== "undefined") {
-	useGLTF.preload("/astronaut.glb");
+	return (
+		<div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+			<AstronautCanvas
+				mouse={mouse}
+				isAstronautVisible={isAstronautVisible}
+				onCanvasError={handleCanvasError}
+				onModelLoaded={handleModelLoaded}
+			/>
+		</div>
+	);
 }

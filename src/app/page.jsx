@@ -6,27 +6,29 @@ import Hero from "@/components/Home/Hero";
 import Newsletter from "@/components/Home/Newsletter";
 import Gallery from "@/components/Home/Gallery";
 import LoadingScreen from "@/components/Home/LoadingScreen";
+import ModelPreloader from "@/components/Home/ModelPreloader";
+import {
+	isMobileDevice,
+	isSmallViewport,
+} from "@/components/Home/astronaut/utils";
 
 export default function Home() {
 	const [isModelLoaded, setIsModelLoaded] = useState(false);
 	const [isLoaded, setIsLoaded] = useState(false);
 
-	// For mobile, set model as loaded after a timeout since there's no 3D model
+	// For mobile devices or small viewports, set model as loaded immediately
 	useEffect(() => {
-		const checkMobile = () => {
-			if (typeof window !== "undefined" && window.innerWidth < 768) {
-				const timer = setTimeout(() => {
-					setIsModelLoaded(true);
-				}, 1500);
-				return () => clearTimeout(timer);
-			}
-		};
-		checkMobile();
+		if (typeof window !== "undefined") {
+			const shouldSkip3D = isMobileDevice() || isSmallViewport();
 
-		// Adding error handler for uncaught errors
+			if (shouldSkip3D) {
+				// Mobile device or small viewport - no 3D model shown, mark as loaded immediately
+				setIsModelLoaded(true);
+			}
+		}
+
+		// Global error handler to prevent app crashes
 		const handleError = (event) => {
-			// console.error("Global error caught:", event.error);
-			// Prevent the error from breaking the app
 			event.preventDefault();
 		};
 
@@ -36,6 +38,7 @@ export default function Home() {
 
 	return (
 		<>
+			<ModelPreloader />
 			<LoadingScreen
 				isModelLoaded={isModelLoaded}
 				onLoadComplete={() => setIsLoaded(true)}

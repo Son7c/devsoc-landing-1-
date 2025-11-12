@@ -34,15 +34,11 @@ export function AstronautCanvas({
 						failIfMajorPerformanceCaveat: false,
 					}}
 					onCreated={(state) => {
-						try {
-							const gl = state.gl.getContext();
-							if (!gl) {
-								onCanvasError(new Error("WebGL context not available"));
-							}
-						} catch (err) {
-							onCanvasError(err);
+						if (!state.gl.getContext()) {
+							onCanvasError();
 						}
 					}}
+					onError={onCanvasError}
 				>
 					<ambientLight intensity={0.6} />
 					<directionalLight

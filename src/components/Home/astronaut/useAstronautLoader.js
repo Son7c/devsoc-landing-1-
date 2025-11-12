@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { isMobileDevice, isLikelyFirstVisit, isWebGLAvailable } from "./utils";
+import { isSmallViewport, isMobileDevice, isWebGLAvailable } from "./utils";
 
 export function useAstronautLoader(onModelLoaded) {
 	const [hasWebGLError, setHasWebGLError] = useState(false);
@@ -10,45 +10,57 @@ export function useAstronautLoader(onModelLoaded) {
 	const [skipCanvas, setSkipCanvas] = useState(false);
 	const loadTimeoutRef = useRef(null);
 	const safetyTimeoutRef = useRef(null);
-	const mountTimeRef = useRef(Date.now());
 
-	// Early detection: Skip Canvas on mobile devices on first visit
+	// Early detection: Check device type, viewport size, and WebGL support
 	useEffect(() => {
 		if (typeof window !== "undefined") {
+			// Check if mobile device first - always use fallback for mobile hardware
 			const isMobile = isMobileDevice();
-			const isFirstVisit = isLikelyFirstVisit();
 
-			if (isMobile && isFirstVisit) {
+			if (isMobile) {
+				// Mobile device (phone/tablet) - always skip 3D model for performance
+				// This applies even in desktop mode to save battery and improve performance
 				setSkipCanvas(true);
-				setWebglSupported(false);
-				setTimeout(() => {
-					setShowFallback(true);
-					onModelLoaded?.();
-				}, 1500);
+				setShowFallback(true);
+				onModelLoaded?.();
 				return;
 			}
 
+			// Check if small viewport (for desktop browsers in small windows)
+			const isSmall = isSmallViewport();
+
+			if (isSmall) {
+				// Small viewport on desktop - skip 3D model for performance
+				setSkipCanvas(true);
+				setShowFallback(true);
+				onModelLoaded?.();
+				return;
+			}
+
+			// Desktop device with large viewport - check WebGL support
 			const supported = isWebGLAvailable();
+
 			if (!supported) {
 				setWebglSupported(false);
-				setTimeout(() => {
-					setShowFallback(true);
-					onModelLoaded?.();
-				}, 1500);
+				setShowFallback(true);
+				onModelLoaded?.();
+				return;
 			}
 		}
 	}, [onModelLoaded]);
 
-	// Set a timeout for model loading
+	// Set a timeout for model loading on large viewports
 	useEffect(() => {
-		if (skipCanvas) return;
+		if (skipCanvas || showFallback || modelLoaded) return;
 
-		const isMobile = isMobileDevice();
-		const timeout = isMobile ? 2500 : 5000;
+		// Generous timeout to handle slow network speeds
+		// This ensures the loading screen stays up until model loads or timeout
+		const timeout = 12000; // 12 seconds for slow connections
 
-		if (webglSupported && !modelLoaded && !modelLoadTimeout) {
+		if (webglSupported && !modelLoadTimeout) {
 			loadTimeoutRef.current = setTimeout(() => {
 				if (!modelLoaded) {
+					// console.warn("Model load timeout - showing fallback image");
 					setModelLoadTimeout(true);
 					setShowFallback(true);
 					onModelLoaded?.();
@@ -56,14 +68,15 @@ export function useAstronautLoader(onModelLoaded) {
 			}, timeout);
 		}
 
-		const safetyTimeout = isMobile ? 4000 : 7000;
+		// Safety timeout as last resort (15 seconds)
 		safetyTimeoutRef.current = setTimeout(() => {
 			if (!modelLoaded && !showFallback) {
+				// console.warn("Safety timeout reached - showing fallback image");
 				setModelLoadTimeout(true);
 				setShowFallback(true);
 				onModelLoaded?.();
 			}
-		}, safetyTimeout);
+		}, 15000);
 
 		return () => {
 			if (loadTimeoutRef.current) {
@@ -82,7 +95,7 @@ export function useAstronautLoader(onModelLoaded) {
 		modelLoadTimeout,
 	]);
 
-	const handleCanvasError = (error) => {
+	const handleCanvasError = () => {
 		setHasWebGLError(true);
 		if (loadTimeoutRef.current) {
 			clearTimeout(loadTimeoutRef.current);
@@ -91,14 +104,9 @@ export function useAstronautLoader(onModelLoaded) {
 			clearTimeout(safetyTimeoutRef.current);
 		}
 
-		const elapsedTime = Date.now() - mountTimeRef.current;
-		const minLoadingTime = 1500;
-		const waitTime = Math.max(0, minLoadingTime - elapsedTime);
-
-		setTimeout(() => {
-			setShowFallback(true);
-			onModelLoaded?.();
-		}, waitTime);
+		// Immediately show fallback on error
+		setShowFallback(true);
+		onModelLoaded?.();
 	};
 
 	const handleModelLoaded = () => {
@@ -113,11 +121,7 @@ export function useAstronautLoader(onModelLoaded) {
 	};
 
 	return {
-		hasWebGLError,
-		modelLoadTimeout,
-		webglSupported,
 		showFallback,
-		modelLoaded,
 		skipCanvas,
 		handleCanvasError,
 		handleModelLoaded,

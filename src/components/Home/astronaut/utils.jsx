@@ -10,24 +10,30 @@ export function isWebGLAvailable() {
 	}
 }
 
-// Detect if we're on a mobile device
-export function isMobileDevice() {
+// Detect if we're on a small viewport (mobile layout)
+export function isSmallViewport() {
 	if (typeof window === "undefined") return false;
-	return (
-		/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-			navigator.userAgent,
-		) ||
-		(navigator.maxTouchPoints && navigator.maxTouchPoints > 2)
-	);
+	return window.innerWidth < 768;
 }
 
-// Check if this is likely the first visit (no cached resources)
-export function isLikelyFirstVisit() {
+// Detect if we're on a mobile device (hardware detection, not viewport)
+// This checks the actual device type regardless of viewport size
+export function isMobileDevice() {
 	if (typeof window === "undefined") return false;
-	const perfEntries = performance.getEntriesByType("navigation");
-	if (perfEntries.length > 0) {
-		const navEntry = perfEntries[0];
-		return navEntry.type === "navigate";
-	}
-	return true;
+
+	// Check user agent for mobile devices
+	const mobileUserAgent =
+		/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+			navigator.userAgent,
+		);
+
+	// Check for touch support (tablets and touch devices)
+	const hasTouchSupport =
+		navigator.maxTouchPoints && navigator.maxTouchPoints > 2;
+
+	// Check for iPad with keyboard (reports as MacIntel but has touch)
+	const isIPadWithKeyboard =
+		navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent);
+
+	return mobileUserAgent || hasTouchSupport || isIPadWithKeyboard;
 }

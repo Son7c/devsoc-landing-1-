@@ -4,57 +4,26 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 export function AstronautModel({ mouse, isAstronautVisible, onModelLoaded }) {
-	const [scale, setScale] = useState(5);
-	const [isMobile, setIsMobile] = useState(false);
+	const [scale, setScale] = useState(4.5);
 
-	useEffect(() => {
-		const updateScale = () => {
-			if (typeof window !== "undefined") {
-				const mobile = window.innerWidth < 768;
-				setIsMobile(mobile);
-				if (mobile) {
-					setScale(4.25);
-				} else {
-					setScale(4.5);
-				}
-			}
-		};
-
-		updateScale();
-		if (typeof window !== "undefined") {
-			window.addEventListener("resize", updateScale);
-			return () => window.removeEventListener("resize", updateScale);
-		}
-	}, []);
-
+	// Load the model
 	const { scene, animations } = useGLTF("/astronaut.glb", true);
+
 	const modelGroup = useRef();
 	const headRef = useRef();
 	const { actions } = useAnimations(animations, scene);
 	const [hasNotifiedLoad, setHasNotifiedLoad] = useState(false);
 
-	// Notify when model is loaded
+	// Notify when model is loaded and ready
 	useEffect(() => {
 		if (scene && !hasNotifiedLoad) {
-			setHasNotifiedLoad(true);
-			onModelLoaded?.();
-		}
-	}, [scene, hasNotifiedLoad, onModelLoaded]);
-
-	// Optimize materials for mobile
-	useEffect(() => {
-		if (isMobile) {
-			scene.traverse((child) => {
-				if (child.isMesh) {
-					child.castShadow = false;
-					child.receiveShadow = false;
-					if (child.material) {
-						child.material.precision = "lowp";
-					}
-				}
+			// Use requestAnimationFrame to ensure the scene is actually rendered
+			requestAnimationFrame(() => {
+				setHasNotifiedLoad(true);
+				onModelLoaded?.();
 			});
 		}
-	}, [scene, isMobile]);
+	}, [scene, hasNotifiedLoad, onModelLoaded]);
 
 	useEffect(() => {
 		// Play first animation if available
@@ -77,21 +46,11 @@ export function AstronautModel({ mouse, isAstronautVisible, onModelLoaded }) {
 		});
 	}, [scene, actions]);
 
-	// Animate head tracking with mouse (skip on mobile for performance)
+	// Animate head tracking with mouse
 	useFrame(() => {
-		if (
-			!isMobile &&
-			headRef.current &&
-			mouse.current &&
-			typeof window !== "undefined"
-		) {
-			let targetX = 0;
-			let targetZ = 0;
-
-			if (isAstronautVisible) {
-				targetX = (mouse.current.x / window.innerWidth) * 2 - 1;
-				targetZ = (mouse.current.y / window.innerHeight) * 2 - 1;
-			}
+		if (headRef.current && mouse.current && isAstronautVisible) {
+			const targetX = (mouse.current.x / window.innerWidth) * 2 - 1;
+			const targetZ = (mouse.current.y / window.innerHeight) * 2 - 1;
 
 			headRef.current.rotation.y = THREE.MathUtils.lerp(
 				headRef.current.rotation.y,
