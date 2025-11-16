@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadToImageKit } from "@/lib/imagekit";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "convex/_generated/api";
+
+// Initialize Convex client
+const getConvexClient = () => {
+	const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+	if (!url) {
+		throw new Error("NEXT_PUBLIC_CONVEX_URL is not configured");
+	}
+	return new ConvexHttpClient(url);
+};
 
 const uploadAttempts = new Map<string, { count: number; resetTime: number }>();
 
@@ -28,25 +38,33 @@ function checkRateLimit(identifier: string): boolean {
 
 export async function POST(request: NextRequest) {
 	try {
-		// Get client IP for rate limiting
 		const clientIp =
 			request.headers.get("x-forwarded-for") ||
 			request.headers.get("x-real-ip") ||
 			"unknown";
 
-		// Check rate limit
 		if (!checkRateLimit(clientIp)) {
 			return NextResponse.json(
-				{ error: "Too many upload attempts. Please try again later." },
+				{ error: "Too many registration attempts. Please try again later." },
 				{ status: 429 },
 			);
 		}
 
 		const formData = await request.formData();
-		const file = formData.get("file") as File;
-		const eventSlug = formData.get("eventSlug") as string;
 
-		// Validate inputs
+		const name = formData.get("name") as string;
+		const roll = formData.get("roll") as string;
+		const phone = formData.get("phone") as string;
+		const email = formData.get("email") as string;
+		const department = formData.get("department") as string;
+		const year = formData.get("year") as string;
+		const questions = formData.get("questions") as string;
+		const eventSlug = formData.get("eventSlug") as string;
+		const eventTitle = formData.get("eventTitle") as string;
+		const transactionId = formData.get("transactionId") as string;
+		const amount = Number(formData.get("amount"));
+		const file = formData.get("file") as File;
+
 		if (!file) {
 			return NextResponse.json({ error: "No file provided" }, { status: 400 });
 		}
@@ -58,7 +76,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate event slug format (prevent path traversal)
 		if (!/^[a-z0-9-]+$/.test(eventSlug)) {
 			return NextResponse.json(
 				{ error: "Invalid event slug format" },
@@ -66,7 +83,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate file size (5MB max)
 		const MAX_FILE_SIZE = 5 * 1024 * 1024;
 		if (file.size > MAX_FILE_SIZE) {
 			return NextResponse.json(
@@ -75,7 +91,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate file type
 		const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 		if (!allowedTypes.includes(file.type)) {
 			return NextResponse.json(
@@ -84,34 +99,44 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Validate file name (prevent malicious filenames)
 		const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
 
-		// Convert file to buffer for server-side upload
+		// Convert file to base64
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
+		const base64Image = buffer.toString("base64");
 
-		// Upload to ImageKit
-		const uploadResponse = await uploadToImageKit(
-			buffer,
+		// console.log("Calling Convex action to register user...");
+
+		// Call Convex action which handles the entire transactional flow
+		const convex = getConvexClient();
+		const result = await convex.action(api.actions.registerUserWithImage, {
+			name,
+			roll,
+			phone,
+			email,
+			department,
+			year,
+			questions,
 			eventSlug,
-			sanitizedFileName,
-		);
-
-		return NextResponse.json({
-			success: true,
-			data: {
-				fileId: uploadResponse.fileId,
-				url: uploadResponse.url,
-				thumbnailUrl: uploadResponse.thumbnailUrl,
-			},
+			eventTitle,
+			transactionId,
+			amount,
+			imageBuffer: base64Image,
+			fileName: sanitizedFileName,
 		});
-	} catch (error) {
-		console.error("Upload error:", error);
 
-		// Don't expose internal error details
+		// console.log("Registration completed successfully!");
+
+		return NextResponse.json(result);
+	} catch (error: any) {
+		// console.error("Registration error:", error);
+
 		return NextResponse.json(
-			{ error: "Failed to upload image. Please try again." },
+			{
+				error:
+					error.message || "Failed to submit registration. Please try again.",
+			},
 			{ status: 500 },
 		);
 	}

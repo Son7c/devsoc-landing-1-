@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { fadeInBlur } from "@/lib/motionVariants";
-import { useMutation } from "convex/react";
-import { api } from "convex/_generated/api";
 import { registrationSchema } from "@/lib/validations/registration";
 import FormInput from "./Registration/FormInput";
 import FormSelect from "./Registration/FormSelect";
@@ -49,8 +47,6 @@ export default function EventRegistrationForm({ event }) {
 	const [errors, setErrors] = useState({});
 	const [submitStatus, setSubmitStatus] = useState(null);
 	const [fileInfo, setFileInfo] = useState(null);
-
-	const registerUser = useMutation(api.registrations.registerUser);
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -117,45 +113,32 @@ export default function EventRegistrationForm({ event }) {
 		try {
 			const validatedData = registrationSchema.parse(formData);
 
-			setUploadProgress("Uploading payment screenshot...");
+			setUploadProgress("Submitting registration...");
 
-			const uploadFormData = new FormData();
-			uploadFormData.append("file", validatedData.paymentScreenshot);
-			uploadFormData.append("eventSlug", event.slug);
+			const registrationFormData = new FormData();
+			registrationFormData.append("name", validatedData.name);
+			registrationFormData.append("roll", validatedData.roll);
+			registrationFormData.append("phone", validatedData.phone);
+			registrationFormData.append("email", validatedData.email);
+			registrationFormData.append("department", validatedData.department);
+			registrationFormData.append("year", validatedData.year);
+			registrationFormData.append("questions", validatedData.questions);
+			registrationFormData.append("eventSlug", event.slug);
+			registrationFormData.append("eventTitle", event.title);
+			registrationFormData.append("transactionId", validatedData.transactionId);
+			registrationFormData.append("amount", "50");
+			registrationFormData.append("file", validatedData.paymentScreenshot);
 
-			const uploadResponse = await fetch("/api/upload-payment-screenshot", {
+			const response = await fetch("/api/register-event", {
 				method: "POST",
-				body: uploadFormData,
+				body: registrationFormData,
 			});
 
-			if (!uploadResponse.ok) {
-				const errorData = await uploadResponse.json();
-				throw new Error(
-					errorData.error || "Failed to upload payment screenshot",
-				);
+			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(result.error || "Failed to submit registration");
 			}
-
-			setUploadProgress("Payment screenshot uploaded successfully!");
-
-			const { data: uploadData } = await uploadResponse.json();
-
-			setUploadProgress("Saving registration details...");
-
-			const result = await registerUser({
-				name: validatedData.name,
-				roll: validatedData.roll,
-				phone: validatedData.phone,
-				email: validatedData.email,
-				department: validatedData.department,
-				year: validatedData.year,
-				questions: validatedData.questions,
-				eventSlug: event.slug,
-				eventTitle: event.title,
-				transactionId: validatedData.transactionId,
-				paymentScreenshotUrl: uploadData.url,
-				paymentScreenshotStorageId: uploadData.fileId,
-				amount: 50,
-			});
 
 			setUploadProgress(null);
 			setSubmitStatus({
@@ -179,7 +162,7 @@ export default function EventRegistrationForm({ event }) {
 			if (fileInput) fileInput.value = "";
 			setFileInfo(null);
 		} catch (error) {
-			console.error("Registration error:", error);
+			// console.error("Registration error:", error);
 
 			if (error.errors) {
 				const fieldErrors = {};

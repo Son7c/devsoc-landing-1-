@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-export const registerUser = mutation({
+export const createPendingRegistration = mutation({
 	args: {
 		name: v.string(),
 		roll: v.string(),
@@ -13,8 +13,6 @@ export const registerUser = mutation({
 		eventSlug: v.string(),
 		eventTitle: v.string(),
 		transactionId: v.string(),
-		paymentScreenshotUrl: v.string(),
-		paymentScreenshotStorageId: v.string(),
 		amount: v.number(),
 	},
 	handler: async (ctx, args) => {
@@ -57,8 +55,8 @@ export const registerUser = mutation({
 		const paymentId = await ctx.db.insert("payments", {
 			userId,
 			transactionId: args.transactionId,
-			paymentScreenshotUrl: args.paymentScreenshotUrl,
-			paymentScreenshotStorageId: args.paymentScreenshotStorageId,
+			paymentScreenshotUrl: "",
+			paymentScreenshotStorageId: "",
 			eventSlug: args.eventSlug,
 			eventTitle: args.eventTitle,
 			amount: args.amount,
@@ -74,7 +72,46 @@ export const registerUser = mutation({
 			success: true,
 			userId,
 			paymentId,
+		};
+	},
+});
+
+export const updateRegistrationWithPayment = mutation({
+	args: {
+		paymentId: v.id("payments"),
+		paymentScreenshotUrl: v.string(),
+		paymentScreenshotStorageId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const payment = await ctx.db.get(args.paymentId);
+
+		if (!payment) {
+			throw new Error("Payment record not found");
+		}
+
+		await ctx.db.patch(args.paymentId, {
+			paymentScreenshotUrl: args.paymentScreenshotUrl,
+			paymentScreenshotStorageId: args.paymentScreenshotStorageId,
+		});
+
+		return {
+			success: true,
 			message: "Registration successful! Your payment is pending verification.",
+		};
+	},
+});
+
+export const deleteRegistration = mutation({
+	args: {
+		userId: v.id("users"),
+		paymentId: v.id("payments"),
+	},
+	handler: async (ctx, args) => {
+		await ctx.db.delete(args.paymentId);
+		await ctx.db.delete(args.userId);
+
+		return {
+			success: true,
 		};
 	},
 });
