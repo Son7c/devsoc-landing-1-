@@ -42,6 +42,24 @@ const devLinks = [
 		type: "twitter",
 		icon: <Twitter size={16} />,
 	},
+	{
+		name: "Souvik",
+		link: "https://www.linkedin.com/in/souvik-majee-4b1b88292/",
+		type: "Linkedin",
+		icon: <Linkedin size={16} />,
+	},
+	{
+		name: "Avik",
+		link: "https://www.instagram.com/nate_river007?igsh=MTRua3p3dzFqamR3Ng==",
+		type: "Instagram",
+		icon: <Instagram size={16} />,
+	},
+	{
+		name: "Pravanjan",
+		link: "https://www.instagram.com/nate_river007?igsh=MTRua3p3dzFqamR3Ng==",
+		type: "Instagram",
+		icon: <Instagram size={16} />,
+	},
 ];
 
 const Footer = () => {
@@ -178,7 +196,10 @@ const Footer = () => {
 						<span key={dev.name}>
 							<DevLink dev={dev} />
 							{index === 0 && ", "}
-							{index === 1 && " & "}
+							{index === 1 && ", "}
+							{index === 2 && ", "}
+							{index === 3 && ", "}
+							{index === 4 && " & "}
 						</span>
 					))}
 				</motion.div>
@@ -270,7 +291,7 @@ const DevLink = ({ dev }) => {
 			>
 				{dev.name}
 			</Link>
-			{(showTooltip || isMobile) && (
+			{/* {(showTooltip || isMobile) && (
 				<motion.div
 					initial={{ opacity: 0, y: 5 }}
 					animate={{ opacity: 1, y: 0 }}
@@ -280,7 +301,7 @@ const DevLink = ({ dev }) => {
 					<div className="flex items-center gap-1 text-white">{dev.icon}</div>
 					<div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-r border-b border-neutral-700 bg-neutral-800"></div>
 				</motion.div>
-			)}
+			)} */}
 		</span>
 	);
 };
